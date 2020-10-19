@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./NST.sol";
+import "./SushiToken.sol";
 
 // TODO DEL?
 interface IMigratorChef {
@@ -22,10 +22,10 @@ interface IMigratorChef {
     function migrate(IERC20 token) external returns (IERC20);
 }
 
-// MasterChef is the master of NST. He can make NST and he is a fair guy.
+// MasterChef is the master of Sushi. He can make Sushi and he is a fair guy.
 //
 // Note that it's ownable and the owner wields tremendous power. The ownership
-// will be transferred to a governance smart contract once NST is sufficiently
+// will be transferred to a governance smart contract once SUSHI is sufficiently
 // distributed and the community can show to govern itself.
 //
 // Have fun reading it. Hopefully it's bug-free. God bless.
@@ -35,19 +35,18 @@ contract MasterChef is Ownable {
 
     // Info of each user.
     struct UserInfo {
-        // TODO to lpAmount
         uint256 amount;     // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
         // TODO add nspAmount
         // uint256 nspAmount;
         //
-        // We do some fancy math here. Basically, any point in time, the amount of NSTs
+        // We do some fancy math here. Basically, any point in time, the amount of SUSHIs
         // entitled to a user but is pending to be distributed is:
         //
-        //   pending reward = (user.amount * pool.accNSTPerShare) - user.rewardDebt
+        //   pending reward = (user.amount * pool.accSushiPerShare) - user.rewardDebt
         //
         // Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
-        //   1. The pool's `accNSTPerShare` (and `lastRewardBlock`) gets updated.
+        //   1. The pool's `accSushiPerShare` (and `lastRewardBlock`) gets updated.
         //   2. User receives the pending reward sent to his/her address.
         //   3. User's `amount` gets updated.
         //   4. User's `rewardDebt` gets updated.
@@ -56,22 +55,22 @@ contract MasterChef is Ownable {
     // Info of each pool.
     struct PoolInfo {
         IERC20 lpToken;           // Address of LP token contract.
-        uint256 allocPoint;       // How many allocation points assigned to this pool. NSTs to distribute per block.
-        uint256 lastRewardBlock;  // Last block number that NSTs distribution occurs.
-        uint256 accNSTPerShare; // Accumulated NSTs per share, times 1e12. See below.
+        uint256 allocPoint;       // How many allocation points assigned to this pool. SUSHIs to distribute per block.
+        uint256 lastRewardBlock;  // Last block number that SUSHIs distribution occurs.
+        uint256 accSushiPerShare; // Accumulated SUSHIs per share, times 1e12. See below.
     }
 
-    // The Newswap TOKEN!
-    NST public nst;
+    // is NST
+    SushiToken public sushi;
     // TODO The Newswap Power 
     // NSP public nsp;
     // Dev address.
     address public devaddr;
-    // Block number when bonus NST period ends.    
+    // Block number when bonus SUSHI period ends.
     uint256 public bonusEndBlock; // TODO DEL?
-    // NST tokens created per block.
-    uint256 public nstPerBlock;
-    // Bonus muliplier for early NST makers.    
+    // SUSHI tokens created per block.
+    uint256 public sushiPerBlock;
+    // Bonus muliplier for early sushi makers.
     uint256 public constant BONUS_MULTIPLIER = 10; // TODO DEL?
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
     IMigratorChef public migrator;  // TODO DEL?
@@ -82,7 +81,7 @@ contract MasterChef is Ownable {
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
     // Total allocation points. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
-    // The block number when NST mining starts.
+    // The block number when SUSHI mining starts.
     uint256 public startBlock;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -91,21 +90,24 @@ contract MasterChef is Ownable {
 
     // TODO add NSP
     constructor(
-        NST _nst,
+        SushiToken _sushi,
         address _devaddr,
-        uint256 _nstPerBlock,
+        uint256 _sushiPerBlock,
         uint256 _startBlock,
         uint256 _bonusEndBlock
     ) public {
-        nst = _nst;
+        sushi = _sushi;
         devaddr = _devaddr;
-        nstPerBlock = _nstPerBlock;
+        sushiPerBlock = _sushiPerBlock;
         bonusEndBlock = _bonusEndBlock;
         startBlock = _startBlock;
     }
 
-    function setNstPerBlock(uint256 _nstPerBlock) public onlyOwner {
-        nstPerBlock = _nstPerBlock;       
+    event SetSushiPerBlock(uint256 _blockNumber, uint256 _sushiPerBlock);
+    function setSushiPerBlock(uint256 _sushiPerBlock) public onlyOwner {
+        massUpdatePools();
+        sushiPerBlock = _sushiPerBlock;   
+        emit SetSushiPerBlock(block.number, _sushiPerBlock);     
     }
 
     function poolLength() external view returns (uint256) {
@@ -124,11 +126,11 @@ contract MasterChef is Ownable {
             lpToken: _lpToken,
             allocPoint: _allocPoint,
             lastRewardBlock: lastRewardBlock,
-            accNSTPerShare: 0
+            accSushiPerShare: 0
         }));
     }
 
-    // Update the given pool's NST allocation point. Can only be called by the owner.
+    // Update the given pool's SUSHI allocation point. Can only be called by the owner.
     function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) public onlyOwner {
         if (_withUpdate) {
             massUpdatePools();
@@ -170,18 +172,18 @@ contract MasterChef is Ownable {
         }
     }
 
-    // View function to see pending NSTs on frontend.
-    function pendingNST(uint256 _pid, address _user) external view returns (uint256) {
+    // View function to see pending SUSHIs on frontend.
+    function pendingSushi(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
-        uint256 accNSTPerShare = pool.accNSTPerShare;
+        uint256 accSushiPerShare = pool.accSushiPerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 nstReward = multiplier.mul(nstPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-            accNSTPerShare = accNSTPerShare.add(nstReward.mul(1e12).div(lpSupply));
+            uint256 sushiReward = multiplier.mul(sushiPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+            accSushiPerShare = accSushiPerShare.add(sushiReward.mul(1e12).div(lpSupply));
         }
-        return user.amount.mul(accNSTPerShare).div(1e12).sub(user.rewardDebt);
+        return user.amount.mul(accSushiPerShare).div(1e12).sub(user.rewardDebt);
     }
 
     // Update reward variables for all pools. Be careful of gas spending!
@@ -204,30 +206,30 @@ contract MasterChef is Ownable {
             return;
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 nstReward = multiplier.mul(nstPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-        nst.mint(devaddr, nstReward.div(10));
-        nst.mint(address(this), nstReward);
-        pool.accNSTPerShare = pool.accNSTPerShare.add(nstReward.mul(1e12).div(lpSupply));
+        uint256 sushiReward = multiplier.mul(sushiPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+        sushi.mint(devaddr, sushiReward.div(10));
+        sushi.mint(address(this), sushiReward);
+        pool.accSushiPerShare = pool.accSushiPerShare.add(sushiReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
 
     // TODO +1% NSP
-    // Deposit LP tokens to MasterChef for NST allocation.
+    // Deposit LP tokens to MasterChef for SUSHI allocation.
     function deposit(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
         if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accNSTPerShare).div(1e12).sub(user.rewardDebt);
+            uint256 pending = user.amount.mul(pool.accSushiPerShare).div(1e12).sub(user.rewardDebt);
             if(pending > 0) {
-                safeNSTTransfer(msg.sender, pending);
+                safeSushiTransfer(msg.sender, pending);
             }
         }
         if(_amount > 0) {
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
             user.amount = user.amount.add(_amount);
         }
-        user.rewardDebt = user.amount.mul(pool.accNSTPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accSushiPerShare).div(1e12);
         emit Deposit(msg.sender, _pid, _amount);
     }
 
@@ -238,15 +240,15 @@ contract MasterChef is Ownable {
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
         updatePool(_pid);
-        uint256 pending = user.amount.mul(pool.accNSTPerShare).div(1e12).sub(user.rewardDebt);
+        uint256 pending = user.amount.mul(pool.accSushiPerShare).div(1e12).sub(user.rewardDebt);
         if(pending > 0) {
-            safeNSTTransfer(msg.sender, pending);
+            safeSushiTransfer(msg.sender, pending);
         }
         if(_amount > 0) {
             user.amount = user.amount.sub(_amount);
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
         }
-        user.rewardDebt = user.amount.mul(pool.accNSTPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accSushiPerShare).div(1e12);
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
@@ -261,13 +263,13 @@ contract MasterChef is Ownable {
         user.rewardDebt = 0;
     }
 
-    // Safe NST transfer function, just in case if rounding error causes pool to not have enough NSTs.
-    function safeNSTTransfer(address _to, uint256 _amount) internal {
-        uint256 nstBal = nst.balanceOf(address(this));
-        if (_amount > nstBal) {
-            nst.transfer(_to, nstBal);
+    // Safe sushi transfer function, just in case if rounding error causes pool to not have enough SUSHIs.
+    function safeSushiTransfer(address _to, uint256 _amount) internal {
+        uint256 sushiBal = sushi.balanceOf(address(this));
+        if (_amount > sushiBal) {
+            sushi.transfer(_to, sushiBal);
         } else {
-            nst.transfer(_to, _amount);
+            sushi.transfer(_to, _amount);
         }
     }
 
