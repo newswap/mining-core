@@ -7,8 +7,11 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./SushiToken.sol";
+import "./uniswapv2/interfaces/IUniswapV2Pair.sol";
+import "./uniswapv2/interfaces/IUniswapV2Factory.sol";
+import "./NSP.sol";
 
-// TODO DEL?
+// TODO 删除没用
 interface IMigratorChef {
     // Perform LP token migration from legacy UniswapV2 to SushiSwap.
     // Take the current LP token address and return the new LP token address.
@@ -60,10 +63,17 @@ contract MasterChef is Ownable {
         uint256 accSushiPerShare; // Accumulated SUSHIs per share, times 1e12. See below.
     }
 
-    // is NST
+    // TODO 改成NST
     SushiToken public sushi;
-    // TODO The Newswap Power 
-    // NSP public nsp;
+
+    // The Newswap Power 
+    NSP public nsp; 
+    address public wnew;
+    IUniswapV2Factory public factory;
+    address public nspBar;
+    // Fee for NST allocation
+    uint256 public feeNSPRate = 1000;
+
     // Dev address.
     address public devaddr;
     // Block number when bonus SUSHI period ends.
@@ -71,9 +81,9 @@ contract MasterChef is Ownable {
     // SUSHI tokens created per block.
     uint256 public sushiPerBlock;
     // Bonus muliplier for early sushi makers.
-    uint256 public constant BONUS_MULTIPLIER = 10; // TODO DEL?
+    uint256 public constant BONUS_MULTIPLIER = 10; // TODO 修改成？？？
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
-    IMigratorChef public migrator;  // TODO DEL?
+    IMigratorChef public migrator;  // TODO 删除没用
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
@@ -88,26 +98,41 @@ contract MasterChef is Ownable {
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 
-    // TODO add NSP
     constructor(
         SushiToken _sushi,
         address _devaddr,
         uint256 _sushiPerBlock,
         uint256 _startBlock,
-        uint256 _bonusEndBlock
+        uint256 _bonusEndBlock,  //TODO 删除？
+
+        NSP _nsp,
+        address _wnew,
+        IUniswapV2Factory _factory,
+        address _nspBar
     ) public {
         sushi = _sushi;
         devaddr = _devaddr;
         sushiPerBlock = _sushiPerBlock;
         bonusEndBlock = _bonusEndBlock;
         startBlock = _startBlock;
+
+        nsp = _nsp;
+        wnew = _wnew;
+        factory = _factory;
+        nspBar = _nspBar;
     }
 
+    // TODO 测试
     event SetSushiPerBlock(uint256 _blockNumber, uint256 _sushiPerBlock);
     function setSushiPerBlock(uint256 _sushiPerBlock) public onlyOwner {
         massUpdatePools();
         sushiPerBlock = _sushiPerBlock;   
         emit SetSushiPerBlock(block.number, _sushiPerBlock);     
+    }
+
+    // TODO 测试
+    function setfeeNSPRate(uint256 _feeNSPRate) public onlyOwner {
+        feeNSPRate = _feeNSPRate;   
     }
 
     function poolLength() external view returns (uint256) {
@@ -139,13 +164,13 @@ contract MasterChef is Ownable {
         poolInfo[_pid].allocPoint = _allocPoint;
     }
 
-    // TODO DEL?
+    // TODO 删除没用
     // Set the migrator contract. Can only be called by the owner.
     function setMigrator(IMigratorChef _migrator) public onlyOwner {
         migrator = _migrator;
     }
 
-    // TODO DEL?
+    // 删除？ 不会将其他的池子迁移到这里
     // Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
     function migrate(uint256 _pid) public {
         require(address(migrator) != address(0), "migrate: no migrator");
@@ -158,7 +183,8 @@ contract MasterChef is Ownable {
         pool.lpToken = newLpToken;
     }
 
-    // TODO BONUS_MULTIPLIER DEL?
+    // TODO 测试
+    // sushi 2个阶段，改动5个阶段！！！！ 根据释放曲线来
     // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
         if (_to <= bonusEndBlock) {
@@ -208,12 +234,53 @@ contract MasterChef is Ownable {
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 sushiReward = multiplier.mul(sushiPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
         sushi.mint(devaddr, sushiReward.div(10));
-        sushi.mint(address(this), sushiReward);
-        pool.accSushiPerShare = pool.accSushiPerShare.add(sushiReward.mul(1e12).div(lpSupply));
+        // TODO 测试，此处有修改
+        uint256 poolSushiReward = sushiReward.sub(sushiReward.div(10));
+        sushi.mint(address(this), poolSushiReward);
+        pool.accSushiPerShare = pool.accSushiPerShare.add(poolSushiReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
 
-    // TODO +1% NSP
+    // pair reserves in NEW
+    function _reserveNEW(IUniswapV2Pair pair) view public returns(uint256 reserveNEW) {
+        address token0 = pair.token0();
+        address token1 = pair.token1();
+        (uint reserve0, uint reserve1,) = pair.getReserves();
+
+        if(token0 == wnew || token1 == wnew) {
+            uint wnewAmount = token0 == wnew ? reserve0 : reserve1;
+            reserveNEW = wnewAmount.mul(2);
+        } else { //两类都不是new资产    如果两个token对价不一样呢？
+            IUniswapV2Pair token0NEWPair = IUniswapV2Pair(factory.getPair(token0, wnew));
+            IUniswapV2Pair token1NEWPair = IUniswapV2Pair(factory.getPair(token1, wnew));
+            require(address(token0NEWPair) != address(0) || address(token1NEWPair) != address(0), 'getNSPAmount: invalid_pair');
+
+            IUniswapV2Pair tokenNEWPair = address(token0NEWPair) != address(0) ? token0NEWPair : token1NEWPair;
+            address tokenNEWPairToken0 = tokenNEWPair.token0();
+            (uint tokenNEWPairReserve0, uint tokenNEWPairReserve1,) = tokenNEWPair.getReserves();
+
+            uint totalToken = address(token0NEWPair) != address(0) ? reserve0 : reserve1;
+            uint wnewAmount = tokenNEWPairToken0 == wnew ? totalToken.mul(tokenNEWPairReserve0).div(tokenNEWPairReserve1) : totalToken.mul(tokenNEWPairReserve1).div(tokenNEWPairReserve0);      
+            reserveNEW = wnewAmount.mul(2);          
+        }
+    }
+
+    // TODO 获得调用deposit时需要消耗的NSP数量  重点检查
+    function getNSPAmount(uint256 _pid, uint256 _amount) view public returns (uint256) {
+        PoolInfo storage pool = poolInfo[_pid];
+        // TODO 测试1 如果pool不存在会怎么样？
+        IUniswapV2Pair pair = IUniswapV2Pair(address(pool.lpToken));
+        uint totalSupply = pair.totalSupply();
+        uint reserveNEW = _reserveNEW(pair).mul(_amount).div(totalSupply);          
+
+        IUniswapV2Pair nspNEWPair = IUniswapV2Pair(factory.getPair(address(nsp), wnew));
+        address nspNEWPairtoken0 = nspNEWPair.token0();
+        (uint nspNEWPairReserve0, uint nspNEWPairReserve1,) = nspNEWPair.getReserves();
+        uint reserveNSP = nspNEWPairtoken0 == wnew ? reserveNEW.mul(nspNEWPairReserve1).div(nspNEWPairReserve0) : reserveNEW.mul(nspNEWPairReserve0).div(nspNEWPairReserve1);
+        // TODO 测试2 返回的结果是否带10**18？
+        return reserveNSP.div(feeNSPRate);
+    }
+
     // Deposit LP tokens to MasterChef for SUSHI allocation.
     function deposit(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
@@ -226,6 +293,12 @@ contract MasterChef is Ownable {
             }
         }
         if(_amount > 0) {
+            // TODO 测试
+            if(feeNSPRate > 0) {
+                uint256 consumeNSPAmount = getNSPAmount(_pid, _amount);
+                nsp.transferFrom(address(msg.sender), nspBar, consumeNSPAmount);
+            }
+
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
             user.amount = user.amount.add(_amount);
         }
