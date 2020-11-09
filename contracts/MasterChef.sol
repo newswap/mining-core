@@ -7,9 +7,6 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./SushiToken.sol";
-import "./uniswapv2/interfaces/IUniswapV2Pair.sol";
-import "./uniswapv2/interfaces/IUniswapV2Factory.sol";
-import "./NSP.sol";
 
 // TODO 删除没用
 interface IMigratorChef {
@@ -40,8 +37,6 @@ contract MasterChef is Ownable {
     struct UserInfo {
         uint256 amount;     // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
-        // TODO add nspAmount
-        // uint256 nspAmount;
         //
         // We do some fancy math here. Basically, any point in time, the amount of SUSHIs
         // entitled to a user but is pending to be distributed is:
@@ -66,15 +61,9 @@ contract MasterChef is Ownable {
     // TODO 改成NST
     SushiToken public sushi;
 
-    // The Newswap Power 
-    NSP public nsp; 
-    address public wnew;
-    IUniswapV2Factory public factory;
-    address public nspBar;
-    // Fee for NST allocation
-    uint256 public feeNSPRate = 1000;
+    uint256 public feeRate = 1000;
 
-    // Dev address.
+    // to NSPMaker
     address public devaddr;
     // Block number when bonus SUSHI period ends.
     uint256 public bonusEndBlock; // TODO DEL?
@@ -103,23 +92,13 @@ contract MasterChef is Ownable {
         address _devaddr,
         uint256 _sushiPerBlock,
         uint256 _startBlock,
-        uint256 _bonusEndBlock,  //TODO 删除？
-
-        NSP _nsp,
-        address _wnew,
-        IUniswapV2Factory _factory,
-        address _nspBar
+        uint256 _bonusEndBlock  //TODO 删除？
     ) public {
         sushi = _sushi;
         devaddr = _devaddr;
         sushiPerBlock = _sushiPerBlock;
         bonusEndBlock = _bonusEndBlock;
         startBlock = _startBlock;
-
-        nsp = _nsp;
-        wnew = _wnew;
-        factory = _factory;
-        nspBar = _nspBar;
     }
 
     // TODO 测试
@@ -131,8 +110,8 @@ contract MasterChef is Ownable {
     }
 
     // TODO 测试
-    function setfeeNSPRate(uint256 _feeNSPRate) public onlyOwner {
-        feeNSPRate = _feeNSPRate;   
+    function setfeeRate(uint256 _feeRate) public onlyOwner {
+        feeRate = _feeRate;   
     }
 
     function poolLength() external view returns (uint256) {
@@ -241,46 +220,6 @@ contract MasterChef is Ownable {
         pool.lastRewardBlock = block.number;
     }
 
-    // pair reserves in NEW
-    function _reserveNEW(IUniswapV2Pair pair) view public returns(uint256 reserveNEW) {
-        address token0 = pair.token0();
-        address token1 = pair.token1();
-        (uint reserve0, uint reserve1,) = pair.getReserves();
-
-        if(token0 == wnew || token1 == wnew) {
-            uint wnewAmount = token0 == wnew ? reserve0 : reserve1;
-            reserveNEW = wnewAmount.mul(2);
-        } else { //两类都不是new资产    如果两个token对价不一样呢？
-            IUniswapV2Pair token0NEWPair = IUniswapV2Pair(factory.getPair(token0, wnew));
-            IUniswapV2Pair token1NEWPair = IUniswapV2Pair(factory.getPair(token1, wnew));
-            require(address(token0NEWPair) != address(0) || address(token1NEWPair) != address(0), 'getNSPAmount: invalid_pair');
-
-            IUniswapV2Pair tokenNEWPair = address(token0NEWPair) != address(0) ? token0NEWPair : token1NEWPair;
-            address tokenNEWPairToken0 = tokenNEWPair.token0();
-            (uint tokenNEWPairReserve0, uint tokenNEWPairReserve1,) = tokenNEWPair.getReserves();
-
-            uint totalToken = address(token0NEWPair) != address(0) ? reserve0 : reserve1;
-            uint wnewAmount = tokenNEWPairToken0 == wnew ? totalToken.mul(tokenNEWPairReserve0).div(tokenNEWPairReserve1) : totalToken.mul(tokenNEWPairReserve1).div(tokenNEWPairReserve0);      
-            reserveNEW = wnewAmount.mul(2);          
-        }
-    }
-
-    // TODO 获得调用deposit时需要消耗的NSP数量  重点检查
-    function getNSPAmount(uint256 _pid, uint256 _amount) view public returns (uint256) {
-        PoolInfo storage pool = poolInfo[_pid];
-        // TODO 测试1 如果pool不存在会怎么样？
-        IUniswapV2Pair pair = IUniswapV2Pair(address(pool.lpToken));
-        uint totalSupply = pair.totalSupply();
-        uint reserveNEW = _reserveNEW(pair).mul(_amount).div(totalSupply);          
-
-        IUniswapV2Pair nspNEWPair = IUniswapV2Pair(factory.getPair(address(nsp), wnew));
-        address nspNEWPairtoken0 = nspNEWPair.token0();
-        (uint nspNEWPairReserve0, uint nspNEWPairReserve1,) = nspNEWPair.getReserves();
-        uint reserveNSP = nspNEWPairtoken0 == wnew ? reserveNEW.mul(nspNEWPairReserve1).div(nspNEWPairReserve0) : reserveNEW.mul(nspNEWPairReserve0).div(nspNEWPairReserve1);
-        // TODO 测试2 返回的结果是否带10**18？
-        return reserveNSP.div(feeNSPRate);
-    }
-
     // Deposit LP tokens to MasterChef for SUSHI allocation.
     function deposit(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
@@ -292,11 +231,11 @@ contract MasterChef is Ownable {
                 safeSushiTransfer(msg.sender, pending);
             }
         }
+        
         if(_amount > 0) {
-            // TODO 测试
-            if(feeNSPRate > 0) {
-                uint256 consumeNSPAmount = getNSPAmount(_pid, _amount);
-                nsp.transferFrom(address(msg.sender), nspBar, consumeNSPAmount);
+            if(feeRate > 0) { // TODO 测试
+                pool.lpToken.safeTransferFrom(address(msg.sender), devaddr, _amount.div(feeRate));           
+                _amount = _amount.sub(_amount.div(feeRate));
             }
 
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
@@ -306,7 +245,6 @@ contract MasterChef is Ownable {
         emit Deposit(msg.sender, _pid, _amount);
     }
 
-    // TODO add NSP
     // Withdraw LP tokens from MasterChef.
     function withdraw(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
@@ -325,7 +263,6 @@ contract MasterChef is Ownable {
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
-    // TODO add NSP
     // Withdraw without caring about rewards. EMERGENCY ONLY.
     function emergencyWithdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];

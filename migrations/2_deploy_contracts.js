@@ -36,7 +36,7 @@ module.exports = async function (deployer, network, accounts) {
   const nspBar = await NSPBar.deployed();
   console.log("NSPBar(xNSP):"+ nspBar.address);
   // 部署nspMaker
-  await deployer.deploy(NSPMaker, factory, nspBar.address, nsp.address, sushiToken.address, wnew)
+  await deployer.deploy(NSPMaker, factory, nspBar.address, nsp.address, wnew)
   const nspMaker = await NSPMaker.deployed();
   console.log("nspMaker:"+ nspMaker.address);
 
@@ -44,8 +44,8 @@ module.exports = async function (deployer, network, accounts) {
   const devaddr = nspMaker.address;
   const sushiPerBlock = web3.utils.toWei("1", 'ether');
   const startBlock = 0;
-  //_sushi, _devaddr, _sushiPerBlock, _startBlock, _bonusEndBlock, _nsp, _wnew, _factory, _nspBar
-  await deployer.deploy(MasterChef, sushiToken.address, devaddr, sushiPerBlock, startBlock, 0, nsp.address, wnew, factory, nspBar.address)
+  //_sushi, _devaddr, _sushiPerBlock, _startBlock, _bonusEndBlock
+  await deployer.deploy(MasterChef, sushiToken.address, devaddr, sushiPerBlock, startBlock, 0)
   var masterChef = await MasterChef.deployed();
   console.log("masterChef:"+ masterChef.address);
 
@@ -73,12 +73,18 @@ module.exports = async function (deployer, network, accounts) {
   // console.log(Number(poolLength))
   // // var pool = await masterChef.poolInfo(poolLength-1)
   // // console.log(pool)
- 
+
   // testnet  TODO 全部修改，重新部署
   // NST(sushiToken):0xea8c987f9bf1688c714a5b9d9e2f4f9ef294f328
   // xNST(sushiBar):0x986a646d9522a9cde91f551bb08c0d78fd72c83d
   // masterChef:0x82a8fbeec9f1706944f1a750eaca0ce6817edcb7 
   // nstMaker(sushiMaker): 0x961e2C89ef87D32cb01b83232AaB247a24F3810c
+  // NSP:0xf3FC63F6293B5E33E87351CB3bfDd21E1348a9C1
+  // NSPBar(xNSP):0xC2E7ccF4602d9AAD33D851d082CBcDdaF7a63c19
+  // nspMaker:0x705e7e90793ED6F9E109B87e505A21Ea2cD959aC
+
+
+
   // 第一个矿池NUSDT_NEW: 0x56aE975581a382193FF36579C81281E179486c43
   // 第二个矿池NST_NEW: 0xffb1f3c23fe8ec28cd4e11711f6321f828f9cb60
 
