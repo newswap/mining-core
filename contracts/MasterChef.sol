@@ -1,26 +1,11 @@
 pragma solidity 0.6.12;
 
-
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./SushiToken.sol";
-
-// TODO 删除没用
-interface IMigratorChef {
-    // Perform LP token migration from legacy UniswapV2 to SushiSwap.
-    // Take the current LP token address and return the new LP token address.
-    // Migrator should have full access to the caller's LP token.
-    // Return the new LP token address.
-    //
-    // XXX Migrator must have allowance access to UniswapV2 LP tokens.
-    // SushiSwap must mint EXACTLY the same amount of SushiSwap LP tokens or
-    // else something bad will happen. Traditional UniswapV2 does not
-    // do that so be careful!
-    function migrate(IERC20 token) external returns (IERC20);
-}
 
 // MasterChef is the master of Sushi. He can make Sushi and he is a fair guy.
 //
@@ -65,14 +50,8 @@ contract MasterChef is Ownable {
 
     // to NSPMaker
     address public devaddr;
-    // Block number when bonus SUSHI period ends.
-    uint256 public bonusEndBlock; // TODO DEL?
     // SUSHI tokens created per block.
     uint256 public sushiPerBlock;
-    // Bonus muliplier for early sushi makers.
-    uint256 public constant BONUS_MULTIPLIER = 10; // TODO 修改成？？？
-    // The migrator contract. It has a lot of power. Can only be set through governance (owner).
-    IMigratorChef public migrator;  // TODO 删除没用
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
@@ -82,6 +61,8 @@ contract MasterChef is Ownable {
     uint256 public totalAllocPoint = 0;
     // The block number when SUSHI mining starts.
     uint256 public startBlock;
+    // The block number when SUSHI mining finish.
+    uint256 public endBlock;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -92,26 +73,36 @@ contract MasterChef is Ownable {
         address _devaddr,
         uint256 _sushiPerBlock,
         uint256 _startBlock,
-        uint256 _bonusEndBlock  //TODO 删除？
+        uint256 _endBlock   // TODO 每次有效期1年，之后需要调用activate重新激活
     ) public {
         sushi = _sushi;
         devaddr = _devaddr;
         sushiPerBlock = _sushiPerBlock;
-        bonusEndBlock = _bonusEndBlock;
         startBlock = _startBlock;
+        endBlock = _endBlock;
     }
 
-    // TODO 测试
-    event SetSushiPerBlock(uint256 _blockNumber, uint256 _sushiPerBlock);
-    function setSushiPerBlock(uint256 _sushiPerBlock) public onlyOwner {
-        massUpdatePools();
-        sushiPerBlock = _sushiPerBlock;   
-        emit SetSushiPerBlock(block.number, _sushiPerBlock);     
+    event Activated(uint256 _endBlock, uint256 _sushiPerBlock);
+    // TODO 测试  每年激活一次，4年后将_endBlock设置为无限大，永续奖励2NST/Block      若将来出块时间改了(如3s改成15s)，重新激活就可以
+    function activate(uint256 _endBlock, uint256 _sushiPerBlock, bool _withUpdate) public onlyOwner {
+        if (_withUpdate) {
+            massUpdatePools();
+        }
+        endBlock = _endBlock;
+        sushiPerBlock = _sushiPerBlock;
+
+        emit Activated(_endBlock, _sushiPerBlock);
     }
 
     // TODO 测试
     function setfeeRate(uint256 _feeRate) public onlyOwner {
         feeRate = _feeRate;   
+    }
+
+    // TODO 测试
+    // MasterChef若出现重大bug时，转移nst的owner
+    function transferNSTOwner(address _newOwner) public onlyOwner {
+        sushi.transferOwnership(_newOwner);
     }
 
     function poolLength() external view returns (uint256) {
@@ -143,37 +134,14 @@ contract MasterChef is Ownable {
         poolInfo[_pid].allocPoint = _allocPoint;
     }
 
-    // TODO 删除没用
-    // Set the migrator contract. Can only be called by the owner.
-    function setMigrator(IMigratorChef _migrator) public onlyOwner {
-        migrator = _migrator;
-    }
-
-    // 删除？ 不会将其他的池子迁移到这里
-    // Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
-    function migrate(uint256 _pid) public {
-        require(address(migrator) != address(0), "migrate: no migrator");
-        PoolInfo storage pool = poolInfo[_pid];
-        IERC20 lpToken = pool.lpToken;
-        uint256 bal = lpToken.balanceOf(address(this));
-        lpToken.safeApprove(address(migrator), bal);
-        IERC20 newLpToken = migrator.migrate(lpToken);
-        require(bal == newLpToken.balanceOf(address(this)), "migrate: bad");
-        pool.lpToken = newLpToken;
-    }
-
-    // TODO 测试
-    // sushi 2个阶段，改动5个阶段！！！！ 根据释放曲线来
     // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
-        if (_to <= bonusEndBlock) {
-            return _to.sub(_from).mul(BONUS_MULTIPLIER);
-        } else if (_from >= bonusEndBlock) {
-            return _to.sub(_from);
+        if (_to <= endBlock) {
+            return _to.sub(_from).mul(sushiPerBlock);
+        } else if (_from >= endBlock) {
+            return 0;
         } else {
-            return bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
-                _to.sub(bonusEndBlock)
-            );
+            return endBlock.sub(_from).mul(sushiPerBlock);
         }
     }
 
@@ -184,8 +152,11 @@ contract MasterChef is Ownable {
         uint256 accSushiPerShare = pool.accSushiPerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
+            // TODO 测试下0的情况
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 sushiReward = multiplier.mul(sushiPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+            uint256 sushiReward = multiplier.mul(pool.allocPoint).div(totalAllocPoint);
+            // TODO 有修改
+            sushiReward = sushiReward.sub(sushiReward.div(10));
             accSushiPerShare = accSushiPerShare.add(sushiReward.mul(1e12).div(lpSupply));
         }
         return user.amount.mul(accSushiPerShare).div(1e12).sub(user.rewardDebt);
@@ -210,8 +181,9 @@ contract MasterChef is Ownable {
             pool.lastRewardBlock = block.number;
             return;
         }
+        // TODO 测试，此处会返回0
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 sushiReward = multiplier.mul(sushiPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+        uint256 sushiReward = multiplier.mul(pool.allocPoint).div(totalAllocPoint);
         sushi.mint(devaddr, sushiReward.div(10));
         // TODO 测试，此处有修改
         uint256 poolSushiReward = sushiReward.sub(sushiReward.div(10));

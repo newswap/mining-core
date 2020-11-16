@@ -42,14 +42,15 @@ module.exports = async function (deployer, network, accounts) {
 
   // 部署masterChef
   const devaddr = nspMaker.address;
-  const sushiPerBlock = web3.utils.toWei("1", 'ether');
+  const sushiPerBlock = web3.utils.toWei("32", 'ether');
   const startBlock = 0;
-  //_sushi, _devaddr, _sushiPerBlock, _startBlock, _bonusEndBlock
-  await deployer.deploy(MasterChef, sushiToken.address, devaddr, sushiPerBlock, startBlock, 0)
+  const oneYearBlock = 365*24*60*20;
+  //_sushi, _devaddr, _sushiPerBlock, _startBlock, _enBlock
+  await deployer.deploy(MasterChef, sushiToken.address, devaddr, sushiPerBlock, startBlock, startBlock+oneYearBlock)
   var masterChef = await MasterChef.deployed();
   console.log("masterChef:"+ masterChef.address);
 
-  // nst owner改成 masterChef    转之前先预铸出？     TODO 如果用发币宝代替sushiToken，则需要将masterChef设置为minter
+  // nst owner改成 masterChef    转之前先预铸出8亿NST     TODO 如果用发币宝代替sushiToken，则需要将masterChef设置为minter
   await sushiToken.transferOwnership(masterChef.address)
   var owner = await sushiToken.owner();
   console.log("nst owner transfer to:"+owner);
@@ -64,7 +65,6 @@ module.exports = async function (deployer, network, accounts) {
   console.log("allocPoint: " + Number(pool['allocPoint']))
   console.log("lastRewardBlock:" + Number(pool['lastRewardBlock']))
   console.log("accSushiPerShare: " + Number(pool['accSushiPerShare']))
-
 
   // 创建nst-new矿池 TODO 这个需要修改
   // const NST_NEW = '0xffb1f3c23fe8ec28cd4e11711f6321f828f9cb60' //TESTNET
