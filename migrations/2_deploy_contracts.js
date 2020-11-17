@@ -43,8 +43,10 @@ module.exports = async function (deployer, network, accounts) {
   // 部署masterChef
   const devaddr = nspMaker.address;
   const sushiPerBlock = web3.utils.toWei("32", 'ether');
-  const startBlock = 0;
-  const oneYearBlock = 365*24*60*20;
+  const number = await web3.eth.getBlockNumber();
+  const startBlock = number + 600; // 30分钟后开启 10:42
+  // const oneYearBlock = 365*24*60*20;
+  const oneYearBlock = 100; //TODO 先测试下挖100个区块，300s=5分钟
   //_sushi, _devaddr, _sushiPerBlock, _startBlock, _enBlock
   await deployer.deploy(MasterChef, sushiToken.address, devaddr, sushiPerBlock, startBlock, startBlock+oneYearBlock)
   var masterChef = await MasterChef.deployed();
@@ -55,52 +57,47 @@ module.exports = async function (deployer, network, accounts) {
   var owner = await sushiToken.owner();
   console.log("nst owner transfer to:"+owner);
 
-  // 创建nusdt-new矿池
-  const NUSDT_NEW = '0x56ae975581a382193ff36579c81281e179486c43' //TESTNET
-  await masterChef.add(100, NUSDT_NEW, true)
-  var poolLength = await masterChef.poolLength()
-  console.log(Number(poolLength))
-  var pool = await masterChef.poolInfo(poolLength-1)
-  console.log("lpToken: " + pool['lpToken'])
-  console.log("allocPoint: " + Number(pool['allocPoint']))
-  console.log("lastRewardBlock:" + Number(pool['lastRewardBlock']))
-  console.log("accSushiPerShare: " + Number(pool['accSushiPerShare']))
 
-  // 创建nst-new矿池 TODO 这个需要修改
-  // const NST_NEW = '0xffb1f3c23fe8ec28cd4e11711f6321f828f9cb60' //TESTNET
+  // testnet  
+  // masterChef: 0x78260098C307b381FFF9Ee21AD22425A4f26C832
+  // NST(sushiToken):0xb627764e8833Ad2b4dc4F53DdBCe57611801AE1C
+  // xNST(sushiBar):0x85B7f8C9a4b0b8498a877478B3aCD3C2849b0fcA
+  // nstMaker(sushiMaker): 0x8CB703D2083A3D452CA42876940225A30Dd756CC
+  // NSP:0x5C0334C357b490Fb0AAD55d00970e172610cf415
+  // NSPBar(xNSP):0x7669cb4B484fD6da7333AD67412000b8cb2E8A12
+  // nspMaker:0xc0d74c05fcd7274e3C1355BF9eD5Ba1d1215d12b
+
+
+
+
+
+  // // 创建nusdt-new矿池  id=0
+  // const masterChef = await MasterChef.at("0x78260098C307b381FFF9Ee21AD22425A4f26C832");
+  // const NUSDT_NEW = '0x56ae975581a382193ff36579c81281e179486c43' //TESTNET
+  // await masterChef.add(100, NUSDT_NEW, true)
+  // var poolLength = await masterChef.poolLength()
+  // console.log(Number(poolLength))
+  // var pool = await masterChef.poolInfo(poolLength-1)
+  // console.log("lpToken: " + pool['lpToken'])
+  // console.log("allocPoint: " + Number(pool['allocPoint']))
+  // console.log("lastRewardBlock:" + Number(pool['lastRewardBlock']))
+  // console.log("accSushiPerShare: " + Number(pool['accSushiPerShare']))
+
+
+  // 创建nst-new矿池  id=1
+  // const masterChef = await MasterChef.at("0x78260098C307b381FFF9Ee21AD22425A4f26C832");
+  // const NST_NEW = '0xba8aba8385c6b84a291cfe55e47594c58e53708c' //TESTNET
   // await masterChef.add(100, NST_NEW, true)
   // var poolLength = await masterChef.poolLength()
   // console.log(Number(poolLength))
-  // // var pool = await masterChef.poolInfo(poolLength-1)
-  // // console.log(pool)
-
-  // testnet  TODO 全部修改，重新部署
-  // NST(sushiToken):0xea8c987f9bf1688c714a5b9d9e2f4f9ef294f328
-  // xNST(sushiBar):0x986a646d9522a9cde91f551bb08c0d78fd72c83d
-  // masterChef:0x82a8fbeec9f1706944f1a750eaca0ce6817edcb7 
-  // nstMaker(sushiMaker): 0x961e2C89ef87D32cb01b83232AaB247a24F3810c
-  // NSP:0xf3FC63F6293B5E33E87351CB3bfDd21E1348a9C1
-  // NSPBar(xNSP):0xC2E7ccF4602d9AAD33D851d082CBcDdaF7a63c19
-  // nspMaker:0x705e7e90793ED6F9E109B87e505A21Ea2cD959aC
+  // var pool = await masterChef.poolInfo(poolLength-1)
+  // console.log(pool)
 
 
 
-  // 第一个矿池NUSDT_NEW: 0x56aE975581a382193FF36579C81281E179486c43
-  // 第二个矿池NST_NEW: 0xffb1f3c23fe8ec28cd4e11711f6321f828f9cb60
 
 
 
-   // 部署测试网 nstMaker(sushiMaker)
-  // const factory = "0x723913136a42684B5e3657e3cD2f67ee3e83A82D";
-  // const bar = "0x986a646d9522a9cde91f551bb08c0d78fd72c83d"
-  // const nst = "0xea8c987f9bf1688c714a5b9d9e2f4f9ef294f328"
-  // const wnew = "0xf4905b9bc02ce21c98eac1803693a9357d5253bf"
-  // // _factory, _bar, _sushi, _weth
-  // await deployer.deploy(SushiMaker, factory, bar, nst, wnew)
-  // var sushiMaker = await SushiMaker.deployed();
-  // console.log("sushiMaker:"+ sushiMaker.address);
-
-  
 
   // sushimaker将token转成nst放入sushiBar
   // const nstPair = await UniswapV2Pair.at('0xffb1f3c23fe8ec28cd4e11711f6321f828f9cb60')
