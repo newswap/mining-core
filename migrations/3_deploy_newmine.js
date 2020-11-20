@@ -6,25 +6,46 @@ const SushiMaker = artifacts.require("SushiMaker");
 const NSP = artifacts.require("NSP");
 const NSPBar = artifacts.require("NSPBar");
 const NSPMaker = artifacts.require("NSPMaker");
-
+const NewMine = artifacts.require("NewMine");
+const XNew = artifacts.require("XNew");
 
 module.exports = async function (deployer, network, accounts) {
-  console.log("accounts[0]:"+accounts[0]);
+  // console.log("accounts[0]:"+accounts[0]);
+  
+  await deployer.deploy(XNew);
+  const xNew = await XNew.deployed();
+  console.log("xNew:"+ xNew.address);
 
-  const factory = "0x723913136a42684B5e3657e3cD2f67ee3e83A82D"; // test/main
   const wnew = "0xf4905b9bc02ce21c98eac1803693a9357d5253bf" // test/main
+  const xNewPerBlock = web3.utils.toWei("32", 'ether');
+  const number = await web3.eth.getBlockNumber();
+  const startBlock = number + 600; // 30分钟后开启
+  const oneYearBlock = 365*24*60*20; //挖一年
+  // _xNew,_wNew, _xNewPerBlock, _startBlock, _endBlock
+  await deployer.deploy(NewMine, xNew.address, wnew, xNewPerBlock, startBlock, startBlock+oneYearBlock);
+  const newMine = await NewMine.deployed();
 
-  const nspMaker = "0xc0d74c05fcd7274e3C1355BF9eD5Ba1d1215d12b"
-  // TODO 测试 将nspMaker持有的nusdt-new、nst转成nsp
-  const pair = await UniswapV2Pair.at('0x56ae975581a382193ff36579c81281e179486c43'); //NUSDT_NEW
-  const bal = await pair.balanceOf(nspMaker);
-  console.log(bal/1e18);
-  const nst = await UniswapV2Pair.at('0xb627764e8833Ad2b4dc4F53DdBCe57611801AE1C'); //nst
-  const bal2 = await nst.balanceOf(nspMaker);
-  console.log(bal2/1e18); //638.4
+  console.log("newMine:" + newMine.address);
 
-  // TODO 激活
-  const masterChef = await MasterChef.at("0x78260098C307b381FFF9Ee21AD22425A4f26C832");
+
+
+
+
+
+  // const factory = "0x723913136a42684B5e3657e3cD2f67ee3e83A82D"; // test/main
+  // const wnew = "0xf4905b9bc02ce21c98eac1803693a9357d5253bf" // test/main
+
+  // const nspMaker = "0xc0d74c05fcd7274e3C1355BF9eD5Ba1d1215d12b"
+  // // TODO 测试 将nspMaker持有的nusdt-new、nst转成nsp
+  // const pair = await UniswapV2Pair.at('0x56ae975581a382193ff36579c81281e179486c43'); //NUSDT_NEW
+  // const bal = await pair.balanceOf(nspMaker);
+  // console.log(bal/1e18);
+  // const nst = await UniswapV2Pair.at('0xb627764e8833Ad2b4dc4F53DdBCe57611801AE1C'); //nst
+  // const bal2 = await nst.balanceOf(nspMaker);
+  // console.log(bal2/1e18); //638.4
+
+  // // TODO 激活
+  // const masterChef = await MasterChef.at("0x78260098C307b381FFF9Ee21AD22425A4f26C832");
   // const sushiPerBlock = web3.utils.toWei("32", 'ether');
   // const number = await web3.eth.getBlockNumber();
   // console.log(number)

@@ -103,7 +103,7 @@ module.exports = {
     },
     mainnet: {
       provider: function() {
-        return new HDWalletProvider("deputy hour tail summer people attack elevator fame veteran margin office popular", 'https://global.rpc.mainnet.newtonproject.org', "mainnet", 0, 4)
+        return new HDWalletProvider("", 'https://cn.rpc.mainnet.diynova.com', "mainnet", 0, 1)
       },
       network_id: "1012", // newchain mainnet id
       gasPrice: 500000000000000              
@@ -118,7 +118,16 @@ module.exports = {
   // Configure your compilers
   compilers: {
     solc: {
-      version: "0.6.12"
+      version: "0.6.12",    // Fetch exact version from solc-bin (default: truffle's version)
+      // docker: true,        // Use "0.5.1" you've installed locally with docker (default: false)
+      // parser: "solcjs",  // Leverages solc-js purely for speedy parsing
+      settings: {          // See the solidity docs for advice about optimization and evmVersion
+        optimizer: {
+            enabled: true,
+            runs: 999999
+        },
+        "evmVersion": "istanbul"
+      }
     }
   }
 }

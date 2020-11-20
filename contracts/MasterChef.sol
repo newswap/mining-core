@@ -99,12 +99,6 @@ contract MasterChef is Ownable {
         feeRate = _feeRate;   
     }
 
-    // TODO 测试
-    // MasterChef若出现重大bug时，转移nst的owner
-    function transferNSTOwner(address _newOwner) public onlyOwner {
-        sushi.transferOwnership(_newOwner);
-    }
-
     function poolLength() external view returns (uint256) {
         return poolInfo.length;
     }

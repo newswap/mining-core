@@ -68,9 +68,6 @@ module.exports = async function (deployer, network, accounts) {
   // nspMaker:0xc0d74c05fcd7274e3C1355BF9eD5Ba1d1215d12b
 
 
-
-
-
   // // 创建nusdt-new矿池  id=0
   // const masterChef = await MasterChef.at("0x78260098C307b381FFF9Ee21AD22425A4f26C832");
   // const NUSDT_NEW = '0x56ae975581a382193ff36579c81281e179486c43' //TESTNET
