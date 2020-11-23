@@ -21,10 +21,13 @@
 // const HDWalletProvider = require('truffle-hdwallet-provider');
 // const infuraKey = "fj4jll3k.....";
 //
-// const fs = require('fs');
+const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
 
 const HDWalletProvider = require("newtruffle-hdwallet-provider");
+
+const testnet_mnemonic = fs.readFileSync(".secret_test").toString().trim();
+const devnet_mnemonic = fs.readFileSync(".secret_dev").toString().trim();
 
 module.exports = {
   /**
@@ -86,24 +89,23 @@ module.exports = {
     //https://rpc1.newchain.newtonproject.org
     //https://rpc2.newchain.cloud.diynova.com
     //https://rpc3.newchain.cloud.diynova.com
-    //toe ripple waste flavor allow girl few because sketch witness disorder fitness
     testnet: {
       provider: function() { 
-        return new HDWalletProvider("toe ripple waste flavor allow girl few because sketch witness disorder fitness", 'https://rpc2.newchain.cloud.diynova.com', "testnet", 0, 4)
+        return new HDWalletProvider(testnet_mnemonic, 'https://rpc2.newchain.cloud.diynova.com', "testnet", 0, 5)
       },
       network_id: "1007", // newchain testnet id
       gasPrice: 500000000000000
     },
     devnet: {
       provider: function() {
-        return new HDWalletProvider("deputy hour tail summer people attack elevator fame veteran margin office popular", 'https://devnet.newchain.cloud.diynova.com', "devnet", 0, 4)
+        return new HDWalletProvider(devnet_mnemonic, 'https://devnet.newchain.cloud.diynova.com', "devnet", 0, 5)
       },
       network_id: "1002", // newchain devnet id
       gasPrice: 500000000000000
     },
     mainnet: {
       provider: function() {
-        return new HDWalletProvider("", 'https://cn.rpc.mainnet.diynova.com', "mainnet", 0, 1)
+        return new HDWalletProvider("", 'https://cn.rpc.mainnet.diynova.com', "mainnet", 0, 5)
       },
       network_id: "1012", // newchain mainnet id
       gasPrice: 500000000000000              
@@ -125,8 +127,8 @@ module.exports = {
         optimizer: {
             enabled: true,
             runs: 999999
-        },
-        "evmVersion": "istanbul"
+        }
+        // "evmVersion": "istanbul"
       }
     }
   }
