@@ -4,9 +4,7 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-
-// TODO 改成NST 测试，或则直接不用，该用发币宝发的，将masterchef添加为minter，到时候想怎么铸就怎么铸币
-contract SushiToken is ERC20("NewSwapToken", "NST"), Ownable {
+contract NST is ERC20("NewSwapToken", "NST"), Ownable {
     /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (MasterChef).
     function mint(address _to, uint256 _amount) public onlyOwner {
         _mint(_to, _amount);
@@ -184,7 +182,7 @@ contract SushiToken is ERC20("NewSwapToken", "NST"), Ownable {
         internal
     {
         address currentDelegate = _delegates[delegator];
-        uint256 delegatorBalance = balanceOf(delegator); // balance of underlying SUSHIs (not scaled);
+        uint256 delegatorBalance = balanceOf(delegator); // balance of underlying NSTs (not scaled);
         _delegates[delegator] = delegatee;
 
         emit DelegateChanged(delegator, currentDelegate, delegatee);

@@ -1,63 +1,64 @@
 const MasterChef = artifacts.require("MasterChef");
-const SushiToken = artifacts.require("SushiToken");
-const SushiBar = artifacts.require("SushiBar");
 const UniswapV2Pair = artifacts.require("UniswapV2Pair");
-const SushiMaker = artifacts.require("SushiMaker");
+const NST = artifacts.require("NST");
+const NSTBar = artifacts.require("NSTBar");
+const NSTMaker = artifacts.require("NSTMaker");
 const NSP = artifacts.require("NSP");
 const NSPBar = artifacts.require("NSPBar");
 const NSPMaker = artifacts.require("NSPMaker");
 
 
 module.exports = async function (deployer, network, accounts) {
-  // console.log("accounts[0]:"+accounts[0]);
+  console.log("accounts[0]:"+accounts[0]);
 
-  // const factory = "0x723913136a42684B5e3657e3cD2f67ee3e83A82D"; // test/main
-  // const wnew = "0xf4905b9bc02ce21c98eac1803693a9357d5253bf" // test/main
+  const factory = "0x723913136a42684B5e3657e3cD2f67ee3e83A82D"; // test/main
+  const wnew = "0xf4905b9bc02ce21c98eac1803693a9357d5253bf" // test/main
 
-  // // 部署NST合约
-  // await deployer.deploy(SushiToken);
-  // const sushiToken = await SushiToken.deployed();
-  // console.log("NST(sushiToken):"+ sushiToken.address);
-  // // 部署sushiBar(xNST)合约
-  // await deployer.deploy(SushiBar, sushiToken.address);
-  // const sushiBar = await SushiBar.deployed();
-  // console.log("sushiBar(xNST):"+ sushiBar.address);
-  // // 部署nstMaker(sushiMaker)
-  // await deployer.deploy(SushiMaker, factory, sushiBar.address, sushiToken.address, wnew)
-  // const sushiMaker = await SushiMaker.deployed();
-  // console.log("nstMaker(sushiMaker):"+ sushiMaker.address);
-  
-  // // 部署NSP合约
-  // await deployer.deploy(NSP);
-  // const nsp = await NSP.deployed();
-  // console.log("NSP:"+ nsp.address);
-  // // 部署nspBar(xNSP)合约
-  // await deployer.deploy(NSPBar, nsp.address);
-  // const nspBar = await NSPBar.deployed();
-  // console.log("NSPBar(xNSP):"+ nspBar.address);
-  // // 部署nspMaker
-  // await deployer.deploy(NSPMaker, factory, nspBar.address, nsp.address, wnew)
-  // const nspMaker = await NSPMaker.deployed();
-  // console.log("nspMaker:"+ nspMaker.address);
+  // 部署NST合约
+  await deployer.deploy(NST);
+  const nst = await NST.deployed();
+  console.log("NST:"+ nst.address);
+  // 部署NSTBar(xNST)合约
+  await deployer.deploy(NSTBar, nst.address);
+  const nstBar = await NSTBar.deployed();
+  console.log("nstBar(xNST):"+ nstBar.address);
+  // 部署nstMaker
+  await deployer.deploy(NSTMaker, factory, nstBar.address, nst.address, wnew)
+  const nstMaker = await NSTMaker.deployed();
+  console.log("nstMaker:"+ nstMaker.address);
 
-  // // 部署masterChef
-  // const devaddr = nspMaker.address;
-  // const sushiPerBlock = web3.utils.toWei("32", 'ether');
-  // const number = await web3.eth.getBlockNumber();
-  // const startBlock = number + 600; // 30分钟后开启 10:42
-  // // const oneYearBlock = 365*24*60*20;
-  // const oneYearBlock = 100; //TODO 先测试下挖100个区块，300s=5分钟
-  // //_sushi, _devaddr, _sushiPerBlock, _startBlock, _enBlock
-  // await deployer.deploy(MasterChef, sushiToken.address, devaddr, sushiPerBlock, startBlock, startBlock+oneYearBlock)
-  // var masterChef = await MasterChef.deployed();
-  // console.log("masterChef:"+ masterChef.address);
+  // 部署NSP合约
+  await deployer.deploy(NSP);
+  const nsp = await NSP.deployed();
+  console.log("NSP:"+ nsp.address);
+  // 部署nspBar(xNSP)合约
+  await deployer.deploy(NSPBar, nsp.address);
+  const nspBar = await NSPBar.deployed();
+  console.log("NSPBar(xNSP):"+ nspBar.address);
+  // 部署nspMaker
+  await deployer.deploy(NSPMaker, factory, nspBar.address, nsp.address, wnew, nst.address)
+  const nspMaker = await NSPMaker.deployed();
+  console.log("nspMaker:"+ nspMaker.address);
 
-  // // nst owner改成 masterChef    转之前先预铸出8亿NST     TODO 如果用发币宝代替sushiToken，则需要将masterChef设置为minter
-  // await sushiToken.transferOwnership(masterChef.address)
-  // var owner = await sushiToken.owner();
-  // console.log("nst owner transfer to:"+owner);
+  // 部署masterChef
+  const devaddr = nspMaker.address;
+  const nstPerBlock = web3.utils.toWei("32", 'ether');
+  const number = await web3.eth.getBlockNumber();
+  const startBlock = number + 600; // 30分钟后开启 10:42
+  // const oneYearBlock = 365*24*60*20;
+  const oneYearBlock = 100; //TODO 先测试下挖100个区块，300s=5分钟
+  //_nst, _devaddr, _nstPerBlock, _startBlock, _enBlock
+  await deployer.deploy(MasterChef, nst.address, devaddr, nstPerBlock, startBlock, startBlock+oneYearBlock)
+  var masterChef = await MasterChef.deployed();
+  console.log("masterChef:"+ masterChef.address);
+
+  // nst owner改成 masterChef    转之前先预铸出8亿NST     TODO 如果用发币宝代替sushiToken，则需要将masterChef设置为minter
+  await nst.transferOwnership(masterChef.address)
+  var owner = await nst.owner();
+  console.log("nst owner transfer to:"+owner);
 
 
+  // =======> 重写部署一套！！！
   // testnet  
   // masterChef: 0x78260098C307b381FFF9Ee21AD22425A4f26C832
   // NST(sushiToken):0xb627764e8833Ad2b4dc4F53DdBCe57611801AE1C
@@ -96,14 +97,14 @@ module.exports = async function (deployer, network, accounts) {
 
 
 
-  // sushimaker将token转成nst放入sushiBar
+  // nstmaker将token转成nst放入nstBar
   // const nstPair = await UniswapV2Pair.at('0xffb1f3c23fe8ec28cd4e11711f6321f828f9cb60')
   // const bal1_1 = await nstPair.balanceOf('0x961e2C89ef87D32cb01b83232AaB247a24F3810c');
   // console.log(bal1_1/1e18)
   // const nst = await UniswapV2Pair.at('0xea8c987f9bf1688c714a5b9d9e2f4f9ef294f328')
   // const bal2_1 = await nst.balanceOf('0x986a646d9522a9cde91f551bb08c0d78fd72c83d');
   // console.log(bal2_1/1e18)
-  // const nstMaker = await SushiMaker.at('0x961e2C89ef87D32cb01b83232AaB247a24F3810c')
+  // const nstMaker = await NSTMaker.at('0x961e2C89ef87D32cb01b83232AaB247a24F3810c')
   // await nstMaker.convert('0xea8c987f9bf1688c714a5b9d9e2f4f9ef294f328','0xf4905b9bc02ce21c98eac1803693a9357d5253bf')
   // const bal1_2 = await nstPair.balanceOf('0x961e2C89ef87D32cb01b83232AaB247a24F3810c');
   // console.log(bal1_2/1e18)

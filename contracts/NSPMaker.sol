@@ -16,25 +16,27 @@ contract NSPMaker {
     using SafeERC20 for IERC20;
 
     IUniswapV2Factory public factory;
-    address public nspBar;
+    address public bar;
     address public nsp;
     address public wnew;
+    address public nst;
 
-    constructor(IUniswapV2Factory _factory, address _nspBar, address _nsp, address _wnew) public {
+    constructor(IUniswapV2Factory _factory, address _bar, address _nsp, address _wnew, address _nst) public {
         factory = _factory;
-        nspBar = _nspBar;
+        bar = _bar;
         nsp = _nsp;
         wnew = _wnew;
+        nst = _nst;
     }
 
-    // covert NST to NSP
-    function convert(address token) public {
-        uint amount = IERC20(token).balanceOf(address(this));
+    // covert NST to NSP    TODO 不允许传token地址，否则可以恶意攻击！！
+    function convertNST() public {
+        uint amount = IERC20(nst).balanceOf(address(this));
         if(amount > 0) {
-            // At least we try to make front-running harder to do.   TODO 需要吗？
+            // At least we try to make front-running harder to do.
             require(msg.sender == tx.origin, "do not convert from contract");
             // First we convert nst to wnew
-            uint256 wnewAmount = _toNEW(token);
+            uint256 wnewAmount = _toNEW(nst);
             // Then we convert the wnew to nsp
             _toNSP(wnewAmount);
         }
@@ -47,6 +49,8 @@ contract NSPMaker {
         IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(token0, token1));
         pair.transfer(address(pair), pair.balanceOf(address(this)));
         pair.burn(address(this));
+
+        // TODO 此处有bug，需要记录获得的token数！_toWNEW中传数量
         // First we convert everything to WNEW
         uint256 wethAmount = _toNEW(token0) + _toNEW(token1);
         // Then we convert the WNEW to NSP
@@ -58,7 +62,7 @@ contract NSPMaker {
         // If the passed token is nsp, don't convert anything
         if (token == nsp) {
             uint amount = IERC20(token).balanceOf(address(this));
-            _safeTransfer(token, nspBar, amount);
+            _safeTransfer(token, bar, amount);
             return 0;
         }
         // If the passed token is WNEW, don't convert anything
@@ -104,7 +108,7 @@ contract NSPMaker {
         uint amountOut = numerator / denominator;
         (uint amount0Out, uint amount1Out) = token0 == wnew ? (uint(0), amountOut) : (amountOut, uint(0));
         // Swap WNEW for NSP
-        pair.swap(amount0Out, amount1Out, nspBar, new bytes(0));
+        pair.swap(amount0Out, amount1Out, bar, new bytes(0));
     }
 
     // Wrapper for safeTransfer

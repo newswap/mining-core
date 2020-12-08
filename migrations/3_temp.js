@@ -1,8 +1,8 @@
 const MasterChef = artifacts.require("MasterChef");
-const SushiToken = artifacts.require("SushiToken");
-const SushiBar = artifacts.require("SushiBar");
 const UniswapV2Pair = artifacts.require("UniswapV2Pair");
-const SushiMaker = artifacts.require("SushiMaker");
+const NST = artifacts.require("NST");
+const NSTBar = artifacts.require("NSTBar");
+const NSTMaker = artifacts.require("NSTMaker");
 const NSP = artifacts.require("NSP");
 const NSPBar = artifacts.require("NSPBar");
 const NSPMaker = artifacts.require("NSPMaker");
@@ -23,16 +23,16 @@ module.exports = async function (deployer, network, accounts) {
   // const bal2 = await nst.balanceOf(nspMaker);
   // console.log(bal2/1e18); //638.4
 
-  // // TODO 激活
+  // TODO 激活
   // const masterChef = await MasterChef.at("0x78260098C307b381FFF9Ee21AD22425A4f26C832");
-  // const sushiPerBlock = web3.utils.toWei("32", 'ether');
+  // const nstPerBlock = web3.utils.toWei("32", 'ether');
   // const number = await web3.eth.getBlockNumber();
   // console.log(number)
-  // const endBlock = number+2+(10*24*60*20)   //再挖10天-1个区块
-  // var tx = await masterChef.activate(endBlock, sushiPerBlock, true)
+  // const endBlock = number+2+(365*24*60*20)   //再挖365天-1个区块
+  // var tx = await masterChef.activate(endBlock, nstPerBlock, true)
   // console.log(tx)
 
-  
+
   // // 部署NSP合约
   // await deployer.deploy(NSP);
   // const nsp = await NSP.deployed();

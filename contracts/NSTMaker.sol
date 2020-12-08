@@ -7,25 +7,24 @@ import "./uniswapv2/interfaces/IUniswapV2ERC20.sol";
 import "./uniswapv2/interfaces/IUniswapV2Pair.sol";
 import "./uniswapv2/interfaces/IUniswapV2Factory.sol";
 
-// SushiMaker is MasterChef's left hand and kinda a wizard. He can cook up Sushi from pretty much anything!
+// NSTMaker is MasterChef's left hand and kinda a wizard. He can cook up NST from pretty much anything!
 //
-// This contract handles "serving up" rewards for xSushi holders by trading tokens collected from fees for Sushi.
+// This contract handles "serving up" rewards for xNST holders by trading tokens collected from fees for NST.
 
-// TODO 改成NSTMaker 测试
-contract SushiMaker {
+contract NSTMaker {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     IUniswapV2Factory public factory;
     address public bar;
-    address public sushi;
-    address public weth;
+    address public nst;
+    address public wnew;
 
-    constructor(IUniswapV2Factory _factory, address _bar, address _sushi, address _weth) public {
+    constructor(IUniswapV2Factory _factory, address _bar, address _nst, address _wnew) public {
         factory = _factory;
-        sushi = _sushi;
+        nst = _nst;
         bar = _bar;
-        weth = _weth;
+        wnew = _wnew;
     }
 
     function convert(address token0, address token1) public {
@@ -34,28 +33,30 @@ contract SushiMaker {
         IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(token0, token1));
         pair.transfer(address(pair), pair.balanceOf(address(this)));
         pair.burn(address(this));
-        // First we convert everything to WETH
-        uint256 wethAmount = _toWETH(token0) + _toWETH(token1);
-        // Then we convert the WETH to Sushi
-        _toSUSHI(wethAmount);
+        
+        // TODO 此处有bug，需要记录获得的token数！_toWNEW中传数量
+        // First we convert everything to WNEW
+        uint256 wnewAmount = _toWNEW(token0) + _toWNEW(token1);
+        // Then we convert the WNEW to NST
+        _toNST(wnewAmount);
     }
 
-    // Converts token passed as an argument to WETH
-    function _toWETH(address token) internal returns (uint256) {
-        // If the passed token is Sushi, don't convert anything
-        if (token == sushi) {
+    // Converts token passed as an argument to WNEW
+    function _toWNEW(address token) internal returns (uint256) {
+        // If the passed token is NST, don't convert anything
+        if (token == nst) {
             uint amount = IERC20(token).balanceOf(address(this));
             _safeTransfer(token, bar, amount);
             return 0;
         }
-        // If the passed token is WETH, don't convert anything
-        if (token == weth) {
+        // If the passed token is WNEW, don't convert anything
+        if (token == wnew) {
             uint amount = IERC20(token).balanceOf(address(this));
-            _safeTransfer(token, factory.getPair(weth, sushi), amount);
+            _safeTransfer(token, factory.getPair(wnew, nst), amount);
             return amount;
         }
         // If the target pair doesn't exist, don't convert anything
-        IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(token, weth));
+        IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(token, wnew));
         if (address(pair) == address(0)) {
             return 0;
         }
@@ -70,26 +71,26 @@ contract SushiMaker {
         uint denominator = reserveIn.mul(1000).add(amountInWithFee);
         uint amountOut = numerator / denominator;
         (uint amount0Out, uint amount1Out) = token0 == token ? (uint(0), amountOut) : (amountOut, uint(0));
-        // Swap the token for WETH
+        // Swap the token for WNEW
         _safeTransfer(token, address(pair), amountIn);
-        pair.swap(amount0Out, amount1Out, factory.getPair(weth, sushi), new bytes(0));
+        pair.swap(amount0Out, amount1Out, factory.getPair(wnew, nst), new bytes(0));
         return amountOut;
     }
 
-    // Converts WETH to Sushi
-    function _toSUSHI(uint256 amountIn) internal {
-        IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(weth, sushi));
-        // Choose WETH as input token
+    // Converts WNEW to NST
+    function _toNST(uint256 amountIn) internal {
+        IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(wnew, nst));
+        // Choose WNEW as input token
         (uint reserve0, uint reserve1,) = pair.getReserves();
         address token0 = pair.token0();
-        (uint reserveIn, uint reserveOut) = token0 == weth ? (reserve0, reserve1) : (reserve1, reserve0);
+        (uint reserveIn, uint reserveOut) = token0 == wnew ? (reserve0, reserve1) : (reserve1, reserve0);
         // Calculate information required to swap
         uint amountInWithFee = amountIn.mul(997);
         uint numerator = amountInWithFee.mul(reserveOut);
         uint denominator = reserveIn.mul(1000).add(amountInWithFee);
         uint amountOut = numerator / denominator;
-        (uint amount0Out, uint amount1Out) = token0 == weth ? (uint(0), amountOut) : (amountOut, uint(0));
-        // Swap WETH for Sushi
+        (uint amount0Out, uint amount1Out) = token0 == wnew ? (uint(0), amountOut) : (amountOut, uint(0));
+        // Swap WNEW for NST
         pair.swap(amount0Out, amount1Out, bar, new bytes(0));
     }
 
