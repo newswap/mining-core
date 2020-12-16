@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 // NSPBar is the coolest bar in town. You come in with some NSP, and leave with more! The longer you stay, the more SNP you get.
 //
 // This contract handles swapping to and from xNSP, NewSwap's staking token.
-contract NSPBar is ERC20("NSPBar", "xNSP"){ //TODO 重点测试
+contract NSPBar is ERC20("NSPBar", "xNSP"){
     using SafeMath for uint256;
     IERC20 public nsp;
 

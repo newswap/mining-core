@@ -9,68 +9,65 @@ const NSPMaker = artifacts.require("NSPMaker");
 
 
 module.exports = async function (deployer, network, accounts) {
-  console.log("accounts[0]:"+accounts[0]);
+  // console.log("accounts[0]:"+accounts[0]);
 
-  const factory = "0x723913136a42684B5e3657e3cD2f67ee3e83A82D"; // test/main
-  const wnew = "0xf4905b9bc02ce21c98eac1803693a9357d5253bf" // test/main
+  // const factory = "0x723913136a42684B5e3657e3cD2f67ee3e83A82D"; // test/main
+  // const wnew = "0xf4905b9bc02ce21c98eac1803693a9357d5253bf" // test/main
 
-  // 部署NST合约
-  await deployer.deploy(NST);
-  const nst = await NST.deployed();
-  console.log("NST:"+ nst.address);
-  // 部署NSTBar(xNST)合约
-  await deployer.deploy(NSTBar, nst.address);
-  const nstBar = await NSTBar.deployed();
-  console.log("nstBar(xNST):"+ nstBar.address);
-  // 部署nstMaker
-  await deployer.deploy(NSTMaker, factory, nstBar.address, nst.address, wnew)
-  const nstMaker = await NSTMaker.deployed();
-  console.log("nstMaker:"+ nstMaker.address);
+  // // 部署NST合约
+  // await deployer.deploy(NST);
+  // const nst = await NST.deployed();
+  // console.log("NST:"+ nst.address);
+  // // 部署NSTBar(xNST)合约
+  // await deployer.deploy(NSTBar, nst.address);
+  // const nstBar = await NSTBar.deployed();
+  // console.log("nstBar(xNST):"+ nstBar.address);
+  // // 部署nstMaker
+  // await deployer.deploy(NSTMaker, factory, nstBar.address, nst.address, wnew)
+  // const nstMaker = await NSTMaker.deployed();
+  // console.log("nstMaker:"+ nstMaker.address);
 
-  // 部署NSP合约
-  await deployer.deploy(NSP);
-  const nsp = await NSP.deployed();
-  console.log("NSP:"+ nsp.address);
-  // 部署nspBar(xNSP)合约
-  await deployer.deploy(NSPBar, nsp.address);
-  const nspBar = await NSPBar.deployed();
-  console.log("NSPBar(xNSP):"+ nspBar.address);
-  // 部署nspMaker
-  await deployer.deploy(NSPMaker, factory, nspBar.address, nsp.address, wnew, nst.address)
-  const nspMaker = await NSPMaker.deployed();
-  console.log("nspMaker:"+ nspMaker.address);
+  // // 部署NSP合约
+  // await deployer.deploy(NSP);
+  // const nsp = await NSP.deployed();
+  // console.log("NSP:"+ nsp.address);
+  // // 部署nspBar(xNSP)合约
+  // await deployer.deploy(NSPBar, nsp.address);
+  // const nspBar = await NSPBar.deployed();
+  // console.log("NSPBar(xNSP):"+ nspBar.address);
+  // // 部署nspMaker
+  // await deployer.deploy(NSPMaker, factory, nspBar.address, nsp.address, wnew, nst.address)
+  // const nspMaker = await NSPMaker.deployed();
+  // console.log("nspMaker:"+ nspMaker.address);
 
-  // 部署masterChef
-  const devaddr = nspMaker.address;
-  const nstPerBlock = web3.utils.toWei("32", 'ether');
-  const number = await web3.eth.getBlockNumber();
-  const startBlock = number + 600; // 30分钟后开启 10:42
+  // // 部署masterChef
+  // const devaddr = nspMaker.address;
+  // const nstPerBlock = web3.utils.toWei("32", 'ether');
+  // const startBlock = await web3.eth.getBlockNumber() + 60; // 3分钟后开启
   // const oneYearBlock = 365*24*60*20;
-  const oneYearBlock = 100; //TODO 先测试下挖100个区块，300s=5分钟
-  //_nst, _devaddr, _nstPerBlock, _startBlock, _enBlock
-  await deployer.deploy(MasterChef, nst.address, devaddr, nstPerBlock, startBlock, startBlock+oneYearBlock)
-  var masterChef = await MasterChef.deployed();
-  console.log("masterChef:"+ masterChef.address);
+  // //_nst, _devaddr, _nstPerBlock, _startBlock, _enBlock
+  // await deployer.deploy(MasterChef, nst.address, devaddr, nstPerBlock, startBlock, startBlock+oneYearBlock)
+  // var masterChef = await MasterChef.deployed();
+  // console.log("masterChef:"+ masterChef.address);
 
-  // nst owner改成 masterChef    转之前先预铸出8亿NST     TODO 如果用发币宝代替sushiToken，则需要将masterChef设置为minter
-  await nst.transferOwnership(masterChef.address)
-  var owner = await nst.owner();
-  console.log("nst owner transfer to:"+owner);
+  // // nst owner改成 masterChef    转之前先预铸出8亿NST     TODO 如果用发币宝代替sushiToken，则需要将masterChef设置为minter
+  // await nst.transferOwnership(masterChef.address)
+  // var owner = await nst.owner();
+  // console.log("nst owner transfer to:"+owner);
 
 
-  // =======> 重写部署一套！！！
-  // testnet  
-  // masterChef: 0x78260098C307b381FFF9Ee21AD22425A4f26C832
-  // NST(sushiToken):0xb627764e8833Ad2b4dc4F53DdBCe57611801AE1C
-  // xNST(sushiBar):0x85B7f8C9a4b0b8498a877478B3aCD3C2849b0fcA
-  // nstMaker(sushiMaker): 0x8CB703D2083A3D452CA42876940225A30Dd756CC
-  // NSP:0x5C0334C357b490Fb0AAD55d00970e172610cf415
-  // NSPBar(xNSP):0x7669cb4B484fD6da7333AD67412000b8cb2E8A12
-  // nspMaker:0xc0d74c05fcd7274e3C1355BF9eD5Ba1d1215d12b
+  // ================testnet  
+  // masterChef: 0x99f935050b5851acfb24ce9114c152a369fd89a7
+  // NST: 0x43bb9b430ce64c2ed0c39c59fe48fac239149240
+  // xNST(nstBar): 0x43e9f5afafd0e897407ee7cf0121d1b2140a8cdc
+  // nstMaker: 0x1ba5baf0b95137a8b0006ecdfbacd8d0cc4a65e0
+  // NSP: 0x8f3f9902ac83a254711cf87eef32e7aa2e8cd97f
+  // NSPBar(xNSP): 0x639a8e293195694fef98cc854cdfa828ea895927
+  // nspMaker: 0x7b606dd6d6fcdfcbffdc59a2b537adc9888b44cc
 
 
   // // 创建nusdt-new矿池  id=0
-  // const masterChef = await MasterChef.at("0x78260098C307b381FFF9Ee21AD22425A4f26C832");
+  // const masterChef = await MasterChef.at("0x99f935050b5851acfB24cE9114C152a369fd89a7");
   // const NUSDT_NEW = '0x56ae975581a382193ff36579c81281e179486c43' //TESTNET
   // await masterChef.add(100, NUSDT_NEW, true)
   // var poolLength = await masterChef.poolLength()
@@ -79,12 +76,11 @@ module.exports = async function (deployer, network, accounts) {
   // console.log("lpToken: " + pool['lpToken'])
   // console.log("allocPoint: " + Number(pool['allocPoint']))
   // console.log("lastRewardBlock:" + Number(pool['lastRewardBlock']))
-  // console.log("accSushiPerShare: " + Number(pool['accSushiPerShare']))
-
+  // console.log("accNSTPerShare: " + Number(pool['accNSTPerShare']))
 
   // 创建nst-new矿池  id=1
-  // const masterChef = await MasterChef.at("0x78260098C307b381FFF9Ee21AD22425A4f26C832");
-  // const NST_NEW = '0xba8aba8385c6b84a291cfe55e47594c58e53708c' //TESTNET
+  // const masterChef = await MasterChef.at("0x99f935050b5851acfB24cE9114C152a369fd89a7");
+  // const NST_NEW = '0x955e90ff4fcd6b79823f6f5185097bdec04cf9c5' //TESTNET
   // await masterChef.add(100, NST_NEW, true)
   // var poolLength = await masterChef.poolLength()
   // console.log(Number(poolLength))
