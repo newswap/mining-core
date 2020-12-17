@@ -72,7 +72,7 @@ contract MasterChef is Ownable {
         address _devaddr,
         uint256 _nstPerBlock,
         uint256 _startBlock,
-        uint256 _endBlock   // TODO 每次有效期1年，之后需要调用activate重新激活
+        uint256 _endBlock
     ) public {
         nst = _nst;
         devaddr = _devaddr;
@@ -146,7 +146,6 @@ contract MasterChef is Ownable {
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
             uint256 nstReward = multiplier.mul(pool.allocPoint).div(totalAllocPoint);
-            // TODO 有修改
             nstReward = nstReward.sub(nstReward.div(10));
             accNSTPerShare = accNSTPerShare.add(nstReward.mul(1e12).div(lpSupply));
         }
@@ -175,7 +174,6 @@ contract MasterChef is Ownable {
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 nstReward = multiplier.mul(pool.allocPoint).div(totalAllocPoint);
         nst.mint(devaddr, nstReward.div(10));
-        // TODO 测试，此处有修改
         uint256 poolNSTReward = nstReward.sub(nstReward.div(10));
         nst.mint(address(this), poolNSTReward);
         pool.accNSTPerShare = pool.accNSTPerShare.add(poolNSTReward.mul(1e12).div(lpSupply));
@@ -245,7 +243,6 @@ contract MasterChef is Ownable {
         }
     }
 
-    // TODO 修改为owner有权限设置
     function dev(address _devaddr) public onlyOwner {
         // require(msg.sender == devaddr, "dev: wut?");
         devaddr = _devaddr;

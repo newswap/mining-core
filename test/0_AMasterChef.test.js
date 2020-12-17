@@ -217,10 +217,29 @@ contract('MasterChef', ([alice, bob, carol, dev, minter]) => {
             await this.chef.deposit(1, '1001', { from: bob });
             // Alice should have 9000 + 5*1/3*900 = 10500 pending reward
             assert.equal((await this.chef.pendingNST(0, alice)).valueOf(), '10500');
-            await time.advanceBlockTo('430');
-            // At block 430. Bob should get 5*2/3*900 = 3333. Alice should get 10500+1500=12000 .
+
+            await time.advanceBlockTo('428');
+            // At block 430,set pool0 allocPoint=20
+            await expectRevert(this.chef.set(0, 20 ,true, { from: bob }), 'Ownable: caller is not the owner');
+            await this.chef.set(0, 20,true, { from: alice });
+            // At block 430.Alice should get 10500+1500=12000 . Bob should get 5*2/3*900 = 3333. 
             assert.equal((await this.chef.pendingNST(0, alice)).valueOf(), '12000');
-            assert.equal((await this.chef.pendingNST(1, bob)).valueOf(), '3000');       
+            assert.equal((await this.chef.pendingNST(1, bob)).valueOf(), '3000');    
+            await time.advanceBlockTo('440');
+            // At block 430. Alice should get 12000 + 10*1/2*900 = 16500 .Bob should get 3000 + 10*1/2*900 = 7500. 
+            assert.equal((await this.chef.pendingNST(0, alice)).valueOf(), '16500');
+            assert.equal((await this.chef.pendingNST(1, bob)).valueOf(), '7500');
+                    
+            await time.advanceBlockTo('444');
+            // At block 445. Alice should get 16500 + 5*1/2*900=18750
+            await this.chef.deposit(0, '0', { from: alice }); // number 445
+            assert.equal((await this.nst.balanceOf(alice)).valueOf(), '18750');
+            await time.advanceBlockTo('449');
+            // At block 450. bob should get 7500 + 5*1/2*900 + 5*1/2*900=14250
+            await this.chef.deposit(1, '0', { from: bob }); // number 450
+            assert.equal((await this.nst.balanceOf(bob)).valueOf(), '12000');
+            assert.equal((await this.nst.balanceOf(dev)).valueOf(), '3416'); 
+            assert.equal((await this.nst.totalSupply()).valueOf(), '34166'); 
         });
 
         it('should stop giving bonus NSTs after the endblock', async () => {
