@@ -11,6 +11,10 @@ module.exports = async function (deployer, network, accounts) {
   // console.log("accounts[0]:"+accounts[0]);
 
 
+
+  // const nsp = await NSP.at("0x8f3f9902ac83a254711cf87eef32e7aa2e8cd97f")
+  // await nsp.mint(accounts[0], web3.utils.toWei("1000", 'ether'))
+
   // const factory = "0x723913136a42684B5e3657e3cD2f67ee3e83A82D"; // test/main
   // const wnew = "0xf4905b9bc02ce21c98eac1803693a9357d5253bf" // test/main
 

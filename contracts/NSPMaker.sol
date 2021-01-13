@@ -28,7 +28,7 @@ contract NSPMaker {
         nst = _nst;
     }
 
-    // covert NST to NSP    TODO 不允许传token地址，否则可以恶意攻击！！
+    // covert NST to NSP
     function convertNST() public {
         uint amount = IERC20(nst).balanceOf(address(this));
         if(amount > 0) {

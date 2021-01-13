@@ -82,7 +82,7 @@ contract MasterChef is Ownable {
     }
 
     event Activated(uint256 _endBlock, uint256 _nstPerBlock);
-    // TODO 每年激活一次，4年后将_endBlock设置为无限大，永续奖励2NST/Block      若将来出块时间改了(如3s改成15s)，重新激活就可以
+    // TODO 每年激活一次，4年后将_endBlock设置为无限大，永续奖励2NST/Block
     function activate(uint256 _endBlock, uint256 _nstPerBlock, bool _withUpdate) public onlyOwner {
         if (_withUpdate) {
             massUpdatePools();

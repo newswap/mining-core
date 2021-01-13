@@ -9,51 +9,51 @@ const NSPMaker = artifacts.require("NSPMaker");
 
 
 module.exports = async function (deployer, network, accounts) {
-  // console.log("accounts[0]:"+accounts[0]);
+  console.log("accounts[0]:"+accounts[0]);
 
-  // const factory = "0x723913136a42684B5e3657e3cD2f67ee3e83A82D"; // test/main
-  // const wnew = "0xf4905b9bc02ce21c98eac1803693a9357d5253bf" // test/main
+  const factory = "0x723913136a42684B5e3657e3cD2f67ee3e83A82D"; // test/main
+  const wnew = "0xf4905b9bc02ce21c98eac1803693a9357d5253bf" // test/main
 
-  // // 部署NST合约
-  // await deployer.deploy(NST);
-  // const nst = await NST.deployed();
-  // console.log("NST:"+ nst.address);
-  // // 部署NSTBar(xNST)合约
-  // await deployer.deploy(NSTBar, nst.address);
-  // const nstBar = await NSTBar.deployed();
-  // console.log("nstBar(xNST):"+ nstBar.address);
-  // // 部署nstMaker
-  // await deployer.deploy(NSTMaker, factory, nstBar.address, nst.address, wnew)
-  // const nstMaker = await NSTMaker.deployed();
-  // console.log("nstMaker:"+ nstMaker.address);
+  // 部署NST合约
+  await deployer.deploy(NST);
+  const nst = await NST.deployed();
+  console.log("NST:"+ nst.address);
+  // 部署NSTBar(xNST)合约
+  await deployer.deploy(NSTBar, nst.address);
+  const nstBar = await NSTBar.deployed();
+  console.log("nstBar(xNST):"+ nstBar.address);
+  // 部署nstMaker
+  await deployer.deploy(NSTMaker, factory, nstBar.address, nst.address, wnew)
+  const nstMaker = await NSTMaker.deployed();
+  console.log("nstMaker:"+ nstMaker.address);
 
   // // 部署NSP合约
-  // await deployer.deploy(NSP);
-  // const nsp = await NSP.deployed();
-  // console.log("NSP:"+ nsp.address);
-  // // 部署nspBar(xNSP)合约
-  // await deployer.deploy(NSPBar, nsp.address);
-  // const nspBar = await NSPBar.deployed();
-  // console.log("NSPBar(xNSP):"+ nspBar.address);
-  // // 部署nspMaker
-  // await deployer.deploy(NSPMaker, factory, nspBar.address, nsp.address, wnew, nst.address)
-  // const nspMaker = await NSPMaker.deployed();
-  // console.log("nspMaker:"+ nspMaker.address);
+  await deployer.deploy(NSP);
+  const nsp = await NSP.deployed();
+  console.log("NSP:"+ nsp.address);
+  // 部署nspBar(xNSP)合约
+  await deployer.deploy(NSPBar, nsp.address);
+  const nspBar = await NSPBar.deployed();
+  console.log("NSPBar(xNSP):"+ nspBar.address);
+  // 部署nspMaker
+  await deployer.deploy(NSPMaker, factory, nspBar.address, nsp.address, wnew, nst.address)
+  const nspMaker = await NSPMaker.deployed();
+  console.log("nspMaker:"+ nspMaker.address);
 
   // // 部署masterChef
-  // const devaddr = nspMaker.address;
-  // const nstPerBlock = web3.utils.toWei("32", 'ether');
-  // const startBlock = await web3.eth.getBlockNumber() + 60; // 3分钟后开启
-  // const oneYearBlock = 365*24*60*20;
-  // //_nst, _devaddr, _nstPerBlock, _startBlock, _enBlock
-  // await deployer.deploy(MasterChef, nst.address, devaddr, nstPerBlock, startBlock, startBlock+oneYearBlock)
-  // var masterChef = await MasterChef.deployed();
-  // console.log("masterChef:"+ masterChef.address);
+  const devaddr = nspMaker.address;
+  const nstPerBlock = web3.utils.toWei("32", 'ether');
+  const startBlock = await web3.eth.getBlockNumber() + 60; // 3分钟后开启
+  const oneYearBlock = 365*24*60*20;
+  //_nst, _devaddr, _nstPerBlock, _startBlock, _enBlock
+  await deployer.deploy(MasterChef, nst.address, devaddr, nstPerBlock, startBlock, startBlock+oneYearBlock)
+  var masterChef = await MasterChef.deployed();
+  console.log("masterChef:"+ masterChef.address);
 
   // // nst owner改成 masterChef    转之前先预铸出8亿NST     TODO 如果用发币宝代替sushiToken，则需要将masterChef设置为minter
-  // await nst.transferOwnership(masterChef.address)
-  // var owner = await nst.owner();
-  // console.log("nst owner transfer to:"+owner);
+  await nst.transferOwnership(masterChef.address)
+  var owner = await nst.owner();
+  console.log("nst owner transfer to:"+owner);
 
 
   // ================testnet  
